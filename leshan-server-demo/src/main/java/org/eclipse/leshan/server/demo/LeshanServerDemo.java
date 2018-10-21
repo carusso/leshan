@@ -49,6 +49,7 @@ import java.security.spec.KeySpec;
 import java.util.ArrayList;
 import java.util.Enumeration;
 import java.util.List;
+import java.util.Collection;
 
 import javax.jmdns.JmDNS;
 import javax.jmdns.ServiceInfo;
@@ -80,6 +81,19 @@ import org.eclipse.leshan.server.impl.FileSecurityStore;
 import org.eclipse.leshan.server.model.LwM2mModelProvider;
 import org.eclipse.leshan.server.model.StaticModelProvider;
 import org.eclipse.leshan.server.security.EditableSecurityStore;
+
+// Chris Russo added these for his tests
+import org.eclipse.leshan.server.registration.RegistrationListener;
+import org.eclipse.leshan.server.registration.Registration;
+import org.eclipse.leshan.server.registration.RegistrationUpdate;
+import org.eclipse.leshan.core.observation.Observation;
+import org.eclipse.leshan.core.response.ReadResponse;
+import org.eclipse.leshan.core.request.ReadRequest;
+import org.eclipse.leshan.core.node.LwM2mResource;
+import org.eclipse.leshan.core.response.ErrorCallback;
+import org.eclipse.leshan.core.response.LwM2mResponse;
+import org.eclipse.leshan.core.response.ResponseCallback;
+
 import org.eclipse.leshan.util.Hex;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -104,6 +118,8 @@ public class LeshanServerDemo {
 
                             "10241.xml", "10242.xml", "10243.xml", "10244.xml", "10245.xml", "10246.xml", "10247.xml",
                             "10248.xml", "10249.xml", "10250.xml",
+			    "10262.xml", "10264.xml", "10266.xml", "10268.xml", "10270.xml", "10272.xml", "10274.xml", "10276.xml", "10278.xml", "10280.xml", "10282.xml", "10284.xml",
+			    "10263.xml", "10265.xml", "10267.xml", "10269.xml", "10271.xml", "10273.xml", "10275.xml", "10277.xml", "10279.xml", "10281.xml", "10283.xml",
 
                             "2048.xml", "2049.xml", "2050.xml", "2051.xml", "2052.xml", "2053.xml", "2054.xml",
                             "2055.xml", "2056.xml", "2057.xml",
@@ -250,6 +266,7 @@ public class LeshanServerDemo {
 
         // Create CoAP Config
         NetworkConfig coapConfig;
+        System.out.println("NetworkConfig.DEFAULT_FILE_NAME: " + NetworkConfig.DEFAULT_FILE_NAME);
         File configFile = new File(NetworkConfig.DEFAULT_FILE_NAME);
         if (configFile.isFile()) {
             coapConfig = new NetworkConfig();
@@ -421,10 +438,62 @@ public class LeshanServerDemo {
             ServiceInfo coapSecureServiceInfo = ServiceInfo.create("_coaps._udp.local.", "leshan", secureLocalPort, "");
             jmdns.registerService(coapSecureServiceInfo);
         }
+        startCustomStuff(lwServer);
 
         // Start Jetty & Leshan
         lwServer.start();
         server.start();
         LOG.info("Web server started at {}.", server.getURI());
+    }
+
+    static private void startCustomStuff(final LeshanServer server) {
+        server.getRegistrationService().addListener(new RegistrationListener() {
+
+            public void registered(Registration registration, Registration previousReg, Collection<Observation> previousObsersations) {
+                System.out.println("new device: " + registration.getEndpoint());
+                 server.send(registration, new ReadRequest(1, 0, 7), new ResponseCallback<ReadResponse>() {
+                    @Override
+                    public void onResponse(ReadResponse response) {
+                        if (response.isSuccess()) {
+                            System.out.println("Response:" + response.getContent());
+                            //System.out.println("Manufacturer:" + ((LwM2mResource)response.getContent()).getValue());
+                        } else {
+                            System.out.println("Failed to read:" + response.getCode() + " " + response.getErrorMessage());
+                        }
+                    }
+                }, new ErrorCallback() {
+                    @Override
+                    public void onError(Exception e) {
+                        System.out.println("Got an error" + e.toString());
+                    }
+                });
+                for (int i = 0; i <= 7; ++i) {
+                    server.send(registration, new ReadRequest(i), new ResponseCallback<ReadResponse>() {
+                        @Override
+                        public void onResponse(ReadResponse response) {
+                            if (response.isSuccess()) {
+                                System.out.println("returned:" + response.getContent());
+                                //System.out.println("Manufacturer:" + ((LwM2mResource)response.getContent()).getValue());
+                            } else {
+                                System.out.println("Failed to read:" + response.getCode() + " " + response.getErrorMessage());
+                            }
+                        }
+                    }, new ErrorCallback() {
+                        @Override
+                        public void onError(Exception e) {
+                            System.out.println("Got an error" + e.toString());
+                        }
+                    });
+                }
+            }
+
+            public void updated(RegistrationUpdate update, Registration updatedReg, Registration previousReg) {
+                System.out.println("device is still here: " + updatedReg.getEndpoint());
+            }
+
+            public void unregistered(Registration registration, Collection<Observation> observations, boolean expired, Registration newReg) {
+                System.out.println("device left: " + registration.getEndpoint());
+            }
+        });
     }
 }
