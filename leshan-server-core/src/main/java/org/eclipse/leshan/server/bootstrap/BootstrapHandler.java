@@ -104,7 +104,11 @@ public class BootstrapHandler {
         e.execute(new Runnable() {
             @Override
             public void run() {
-                sendDelete(session, cfg);
+                LOG.trace("Running the bootstrap session");
+                // Removed the delete clause since SEW isn't doing the same.
+                // sendDelete(session, cfg);
+                List<Integer> toSend = new ArrayList<>(cfg.security.keySet());
+                sendBootstrap(session, cfg, toSend);
             }
         });
 
@@ -117,7 +121,7 @@ public class BootstrapHandler {
         send(session, deleteRequest, new ResponseCallback<BootstrapDeleteResponse>() {
             @Override
             public void onResponse(BootstrapDeleteResponse response) {
-                LOG.trace("Bootstrap delete {} return code {}", session.getEndpoint(), response.getCode());
+                LOG.trace("xxx Bootstrap delete {} return code {}", session.getEndpoint(), response.getCode());
                 List<Integer> toSend = new ArrayList<>(cfg.security.keySet());
                 sendBootstrap(session, cfg, toSend);
             }
@@ -206,8 +210,11 @@ public class BootstrapHandler {
             }, new ErrorCallback() {
                 @Override
                 public void onError(Exception e) {
-                    LOG.debug(String.format("Error during bootstrap finished on %s", session.getEndpoint()), e);
-                    sessionManager.failed(session, SEND_FINISH_FAILED, finishBootstrapRequest);
+                    // Chris changed this to avoid the retries.
+                    LOG.debug("Error during bootstrap finished, ignoring the likely timeout.");
+                    sessionManager.end(session);
+                    // LOG.debug(String.format("Error during bootstrap finished on %s", session.getEndpoint()), e);
+                    // sessionManager.failed(session, SEND_FINISH_FAILED, finishBootstrapRequest);
                 }
             });
         }

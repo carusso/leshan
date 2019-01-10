@@ -46,6 +46,7 @@ import java.security.spec.ECPublicKeySpec;
 import java.security.spec.InvalidKeySpecException;
 import java.security.spec.InvalidParameterSpecException;
 import java.security.spec.KeySpec;
+import java.util.Arrays;
 import java.util.ArrayList;
 import java.util.Enumeration;
 import java.util.List;
@@ -86,9 +87,13 @@ import org.eclipse.leshan.server.security.EditableSecurityStore;
 import org.eclipse.leshan.server.registration.RegistrationListener;
 import org.eclipse.leshan.server.registration.Registration;
 import org.eclipse.leshan.server.registration.RegistrationUpdate;
+import org.eclipse.leshan.server.observation.ObservationListener;
 import org.eclipse.leshan.core.observation.Observation;
+import org.eclipse.leshan.core.response.ObserveResponse;
+import org.eclipse.leshan.core.request.ObserveRequest;
 import org.eclipse.leshan.core.response.ReadResponse;
 import org.eclipse.leshan.core.request.ReadRequest;
+import org.eclipse.leshan.core.node.LwM2mNode;
 import org.eclipse.leshan.core.node.LwM2mResource;
 import org.eclipse.leshan.core.response.ErrorCallback;
 import org.eclipse.leshan.core.response.LwM2mResponse;
@@ -451,40 +456,8 @@ public class LeshanServerDemo {
 
             public void registered(Registration registration, Registration previousReg, Collection<Observation> previousObsersations) {
                 System.out.println("new device: " + registration.getEndpoint());
-                 server.send(registration, new ReadRequest(1, 0, 7), new ResponseCallback<ReadResponse>() {
-                    @Override
-                    public void onResponse(ReadResponse response) {
-                        if (response.isSuccess()) {
-                            System.out.println("Response:" + response.getContent());
-                            //System.out.println("Manufacturer:" + ((LwM2mResource)response.getContent()).getValue());
-                        } else {
-                            System.out.println("Failed to read:" + response.getCode() + " " + response.getErrorMessage());
-                        }
-                    }
-                }, new ErrorCallback() {
-                    @Override
-                    public void onError(Exception e) {
-                        System.out.println("Got an error" + e.toString());
-                    }
-                });
-                for (int i = 0; i <= 7; ++i) {
-                    server.send(registration, new ReadRequest(i), new ResponseCallback<ReadResponse>() {
-                        @Override
-                        public void onResponse(ReadResponse response) {
-                            if (response.isSuccess()) {
-                                System.out.println("returned:" + response.getContent());
-                                //System.out.println("Manufacturer:" + ((LwM2mResource)response.getContent()).getValue());
-                            } else {
-                                System.out.println("Failed to read:" + response.getCode() + " " + response.getErrorMessage());
-                            }
-                        }
-                    }, new ErrorCallback() {
-                        @Override
-                        public void onError(Exception e) {
-                            System.out.println("Got an error" + e.toString());
-                        }
-                    });
-                }
+                final int[][] observes = {{5,0,3}, {5,0,5}, {10262,0,2}, {10263,0,2}};
+                sendObserves(server, registration, observes);
             }
 
             public void updated(RegistrationUpdate update, Registration updatedReg, Registration previousReg) {
@@ -495,5 +468,88 @@ public class LeshanServerDemo {
                 System.out.println("device left: " + registration.getEndpoint());
             }
         });
+        attachListener(server);
+    }
+
+    static private void sendObserves(final LeshanServer server, final Registration registration, final int[][] observes) {
+        if (observes.length > 0) {
+            final int[][] newObserves = Arrays.copyOfRange(observes, 1, observes.length);
+            int[] observe = observes[0];
+            System.out.println("New Observes" + newObserves);
+            System.out.println("Sending Observe" + observe);
+            server.send(registration, new ObserveRequest(observe[0], observe[1], observe[2]), 
+                new ResponseCallback<ObserveResponse>() {
+                    @Override
+                    public void onResponse(ObserveResponse response) {
+                        if (response.isSuccess()) {
+                            System.out.println("Response:" + response.getContent());
+                            dumpObserveResponse(response);
+                            sendObserves(server, registration, newObserves);
+                        } else {
+                            System.out.println("Failed to observe:" + response.getCode() + " " + response.getErrorMessage());
+                        }
+                    }
+                }, new ErrorCallback() {
+                    @Override
+                    public void onError(Exception e) {
+                        System.out.println("Got an error" + e.toString());
+                    }
+                });
+        }
+    }
+
+    static private void attachListener(final LeshanServer server) {
+        System.out.println("Attaching Listener");
+        server.getObservationService().addListener(new ObservationListener() {
+            @Override
+            public void newObservation(Observation observation, Registration registration) {
+                System.out.println("New Observation");
+            }
+   
+            @Override
+            public void cancelled(Observation observation) {
+                System.out.println("Observation cancellation");
+            }
+
+            @Override
+            public void onResponse(Observation observation, Registration registration, ObserveResponse response) {
+                System.out.println("Observation Response");
+                System.out.println("Observation:" + observation);
+                System.out.println("Registration:" + registration);
+                System.out.println("ObserveResponse:" + response);
+                dumpObserveResponse(response);
+            }
+
+            @Override
+            public void onError(Observation observation, Registration registration, Exception error) {
+                System.out.println("Observation Error");
+            }
+        });
+    }
+
+    static private void dumpObserveResponse(ObserveResponse response) {
+        System.out.println("Dumping ObserveResponse here TBD");
+        
+    }
+
+    static private void cruftLoopThroughSomeObjects(final LeshanServer server, Registration registration) {
+        for (int i = 0; i <= 7; ++i) {
+            server.send(registration, new ReadRequest(i), new ResponseCallback<ReadResponse>() {
+                @Override
+                public void onResponse(ReadResponse response) {
+                    if (response.isSuccess()) {
+                        System.out.println("returned:" + response.getContent());
+                        //System.out.println("Manufacturer:" + ((LwM2mResource)response.getContent()).getValue());
+                    } else {
+                        System.out.println("Failed to read:" + response.getCode() + " " + response.getErrorMessage());
+                    }
+                }
+            }, new ErrorCallback() {
+                @Override
+                public void onError(Exception e) {
+                    System.out.println("Got an error" + e.toString());
+                }
+            });
+        }
     }
 }

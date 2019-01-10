@@ -227,6 +227,8 @@ public class LeshanBootstrapServerDemo {
             coapConfig = LeshanServerBuilder.createDefaultNetworkConfig();
             coapConfig.store(configFile);
         }
+        // Don't need retries during bootstrap
+        coapConfig.setInt(NetworkConfig.Keys.MAX_RETRANSMIT, 0);
         builder.setCoapConfig(coapConfig);
 
         LeshanBootstrapServer bsServer = builder.build();

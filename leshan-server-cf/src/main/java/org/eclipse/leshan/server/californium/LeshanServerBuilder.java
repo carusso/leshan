@@ -60,6 +60,8 @@ import org.eclipse.leshan.server.security.SecurityStore;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.eclipse.leshan.core.californium.CustomContextMatcher;
+
 /**
  * Class helping you to build and configure a Californium based Leshan Lightweight M2M server. Usage: create it, call
  * the different setters for changing the configuration and then call the {@link #build()} method for creating the
@@ -477,6 +479,7 @@ public class LeshanServerBuilder {
                 builder.setInetSocketAddress(localAddress);
                 builder.setNetworkConfig(coapConfig);
                 builder.setObservationStore(registrationStore);
+                builder.setEndpointContextMatcher(new CustomContextMatcher());
                 unsecuredEndpoint = builder.build();
             }
         }

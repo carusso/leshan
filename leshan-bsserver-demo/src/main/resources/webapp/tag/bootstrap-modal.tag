@@ -96,9 +96,9 @@
             // add config to the store
             bsConfigStore.add(endpoint.value, {
                  dm:[{
-                    binding : "U",
+                    binding : "UQ",
                     defaultMinPeriod : 1,
-                    lifetime : 20,
+                    lifetime : 115200,
                     notifIfDisabled : true,
                     shortId : 123,
                     security : {
@@ -116,22 +116,7 @@
                         uri : lwserver.uri
                       }
                 }],
-                 bs:[{
-                    security : {
-                        bootstrapServer : true,
-                        clientOldOffTime : 1,
-                        publicKeyOrId : bsserver.id,
-                        secretKey : bsserver.key,
-                        securityMode : bsserver.secmode,
-                        serverId : 111,
-                        serverPublicKey : bsserver.serverKey,
-                        serverSmsNumber : "",
-                        smsBindingKeyParam : [  ],
-                        smsBindingKeySecret : [  ],
-                        smsSecurityMode : "NO_SEC",
-                        uri : bsserver.uri,
-                      }
-                }]
+                 bs:[ ]
             });
             $('#bootstrap-modal').modal('hide');
             return false;

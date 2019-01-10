@@ -41,7 +41,7 @@ public class BootstrapConfig implements Serializable {
         public Integer defaultMaxPeriod = null;
         public Integer disableTimeout = null;
         public boolean notifIfDisabled = true;
-        public BindingMode binding = BindingMode.U;
+        public BindingMode binding = BindingMode.UQ;
 
         @Override
         public String toString() {
